@@ -103,6 +103,11 @@
             align-items: center;
             position: relative;
         }
+		
+		.acronym a {
+            color: inherit;
+            text-decoration: none;
+        }
         
         .acronym {
             font-size: 28px;
@@ -351,6 +356,72 @@
             min-width: 120px;
         }
 
+        #karaoke-volume {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #karaoke-vol-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #999;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        #karaoke-vol-label.muted {
+            color: #ff3333;
+        }
+
+        /* Volume slider — styled to match the progress bar line */
+        #karaoke-vol-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 80px;
+            height: 2px;
+            background: #ccc;
+            outline: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        #karaoke-vol-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff3333;
+            cursor: pointer;
+        }
+
+        #karaoke-vol-slider::-moz-range-thumb {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff3333;
+            border: none;
+            cursor: pointer;
+        }
+
+        #karaoke-vol-slider::-webkit-slider-runnable-track {
+            height: 2px;
+            background: linear-gradient(to right, #ff3333 var(--vol-pct, 100%), #ccc var(--vol-pct, 100%));
+        }
+
+        #karaoke-vol-slider::-moz-range-track {
+            height: 2px;
+            background: #ccc;
+        }
+
+        #karaoke-vol-slider::-moz-range-progress {
+            height: 2px;
+            background: #ff3333;
+        }
+
         /* Active highlight state for karaoke — matches hover effect */
         .acronym.karaoke-active {
             border-bottom-color: #000 !important;
@@ -414,31 +485,31 @@
                         <div class="meaning"><br>Međunarodni Signal opasnosti</div>
                     </div>
                     <div class="acronym">
-                        CIA
+                        <a href="https://cia.gov" target="_blank">CIA</a>
                         <div class="meaning">Central Intelligence Agency</div>
                     </div>
                     <div class="acronym">
-                        FBI
+                        <a href="https://www.fbi.gov" target="_blank">FBI</a>
                         <div class="meaning">Federal Bureau of Investigation</div>
                     </div>
                     <div class="acronym">
-                        NSA
+                        <a href="https://www.nsa.gov/" target="_blank">NSA</a>
                         <div class="meaning">National Security Agency</div>
                     </div>
                     <div class="acronym">
-                        CBS
+                        <a href="https://www.cbsnews.com/" target="_blank">CBS</a>
                         <div class="meaning">Columbia Broadcasting System</div>
                     </div>
                     <div class="acronym">
-                        NBC
+                        <a href="https://www.nbcnews.com/" target="_blank">NBC</a>
                         <div class="meaning">National Broadcasting Company</div>
                     </div>
                     <div class="acronym">
-                        CNN
+                        <a href="https://edition.cnn.com/" target="_blank">CNN</a>
                         <div class="meaning">Cable News Network</div>
                     </div>
                     <div class="acronym">
-                        ABC
+                        <a href="https://abcnews.com/" target="_blank">ABC</a>
                         <div class="meaning">American Broadcasting Company</div>
                     </div>
                     <div class="acronym sos">
@@ -753,6 +824,10 @@
             <div id="karaoke-progress-fill"></div>
         </div>
         <span id="karaoke-time">0:00</span>
+        <div id="karaoke-volume">
+            <span id="karaoke-vol-label" onclick="karaokeMute()">Vol</span>
+            <input type="range" id="karaoke-vol-slider" min="0" max="1" step="0.01" value="1" oninput="karaokeVolume(this.value)">
+        </div>
     </div>
 
     <!-- Hidden audio element — set src to your song file -->
@@ -994,6 +1069,35 @@
 
     audio.addEventListener('pause', () => { btn.textContent = 'Play'; });
     audio.addEventListener('play',  () => { btn.textContent = 'Pause'; });
+
+    let lastVolume = 1;
+
+    function karaokeVolume(val) {
+        val = parseFloat(val);
+        audio.volume = val;
+        audio.muted = val === 0;
+        const slider = document.getElementById('karaoke-vol-slider');
+        slider.style.setProperty('--vol-pct', (val * 100) + '%');
+        document.getElementById('karaoke-vol-label').classList.toggle('muted', val === 0);
+    }
+
+    function karaokeMute() {
+        const slider = document.getElementById('karaoke-vol-slider');
+        if (audio.muted || audio.volume === 0) {
+            const restore = lastVolume || 1;
+            audio.muted = false;
+            audio.volume = restore;
+            slider.value = restore;
+            slider.style.setProperty('--vol-pct', (restore * 100) + '%');
+            document.getElementById('karaoke-vol-label').classList.remove('muted');
+        } else {
+            lastVolume = audio.volume;
+            audio.muted = true;
+            slider.value = 0;
+            slider.style.setProperty('--vol-pct', '0%');
+            document.getElementById('karaoke-vol-label').classList.add('muted');
+        }
+    }
 
     /* ── DEV HELPER: open browser console and run karaokeListAcronyms()
        to print every acronym with its index, so you can map timings.   ── */
