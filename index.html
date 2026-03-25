@@ -286,6 +286,86 @@
             }
         }
         
+        /* ── Karaoke player bar ── */
+        #karaoke-player {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-top: 1px solid #000;
+            padding: 12px 40px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            z-index: 1000;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+
+        #karaoke-player button {
+            background: none;
+            border: 1px solid #000;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            padding: 6px 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        #karaoke-player button:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        #karaoke-progress-wrap {
+            flex: 1;
+            height: 2px;
+            background: #ccc;
+            position: relative;
+            cursor: pointer;
+        }
+
+        #karaoke-progress-fill {
+            height: 2px;
+            background: #ff3333;
+            width: 0%;
+            transition: width 0.1s linear;
+            pointer-events: none;
+        }
+
+        #karaoke-time {
+            font-size: 10px;
+            letter-spacing: 1px;
+            color: #999;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        #karaoke-song-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #999;
+            min-width: 120px;
+        }
+
+        /* Active highlight state for karaoke — matches hover effect */
+        .acronym.karaoke-active {
+            border-bottom-color: #000 !important;
+            transform: translateY(-2px);
+        }
+
+        .acronym.karaoke-active .meaning {
+            opacity: 1;
+        }
+
+        /* Push page content up so player bar doesn't cover it */
+        body.karaoke-on {
+            padding-bottom: 70px;
+        }
+
         /* Print styles */
         @media print {
             .container {
@@ -400,7 +480,7 @@
             <div class="verse">
                 <div class="verse-number">02</div>
                 <div class="verse-content">
-                    <div class="verse-label">Korporacije i hitni slučajevi</div>
+                    <div class="verse-label">Corporate & Emergency</div>
                     <div class="acronym sos">
                         SOS
                         <div class="meaning"><br>Međunarodni Signal opasnosti</div>
@@ -455,7 +535,7 @@
                     </div>
                     <div class="acronym">
                         ATF
-                        <div class="meaning">Bureau of Alcohol Tobacco Firearms</div>
+                        <div class="meaning">Bureau Alcohol Tobacco Firearms</div>
                     </div>
                     <div class="acronym">
                         NRA
@@ -472,7 +552,7 @@
             <div class="verse">
                 <div class="verse-number">03</div>
                 <div class="verse-content">
-                    <div class="verse-label">Vojska i obrazovanje</div>
+                    <div class="verse-label">Military & Education</div>
                     <div class="acronym sos">
                         SOS
                         <div class="meaning"><br>Međunarodni Signal opasnosti</div>
@@ -544,7 +624,7 @@
             <div class="verse">
                 <div class="verse-number">04</div>
                 <div class="verse-content">
-                    <div class="verse-label">Droga i tehnologija</div>
+                    <div class="verse-label">Drugs & Technology</div>
                     <div class="acronym sos">
                         SOS
                         <div class="meaning"><br>Međunarodni Signal opasnosti</div>
@@ -616,7 +696,7 @@
             <div class="verse">
                 <div class="verse-number">05</div>
                 <div class="verse-content">
-                    <div class="verse-label">Sport i zdravlje</div>
+                    <div class="verse-label">Sports & Health</div>
                     <div class="acronym sos">
                         SOS
                         <div class="meaning"><br>Međunarodni Signal opasnosti</div>
@@ -663,5 +743,266 @@
         
         <div class="credit">Alen Nikolaus — Interpretacija teksta — 2025</div>
     </div>
+    <!-- ════════════════════════════════════════════════
+         KARAOKE PLAYER
+         ════════════════════════════════════════════════ -->
+    <div id="karaoke-player">
+        <span id="karaoke-song-label">SOS — Rick Ross</span>
+        <button id="karaoke-btn" onclick="karaokeToggle()">Play</button>
+        <div id="karaoke-progress-wrap" onclick="karaokeSeek(event)">
+            <div id="karaoke-progress-fill"></div>
+        </div>
+        <span id="karaoke-time">0:00</span>
+    </div>
+
+    <!-- Hidden audio element — set src to your song file -->
+    <audio id="karaoke-audio" preload="auto">
+        <source src="SOS.mp3" type="audio/mpeg">
+        <!-- Replace YOUR_SONG_FILE.mp3 with your actual audio file path -->
+    </audio>
+
+    <script>
+    /* ════════════════════════════════════════════════════════════════
+       KARAOKE CONFIGURATION — EDIT THIS SECTION
+       ════════════════════════════════════════════════════════════════
+
+       Each entry below tells the player WHICH acronym to highlight
+       and WHEN (in seconds from the start of the song).
+
+       HOW TO FIND YOUR TIMINGS:
+         1. Open your audio file in Audacity (free) or any audio editor
+         2. Play the song and note the timestamp when each word is said
+         3. Enter those seconds below
+
+       FORMAT:
+         { time: 4.2,  index: 0 }
+         — "at 4.2 seconds, highlight the acronym at index 0"
+
+       INDEX = the position of the .acronym element on the page,
+       counting from 0 (top-left first, left-to-right, top-to-bottom).
+
+       Use the helper below the config to count them automatically.
+
+    ════════════════════════════════════════════════════════════════ */
+
+    const KARAOKE_CONFIG = {
+
+        /* The label shown in the player bar */
+        songLabel: "SOS — Rick Moranis",
+
+        /* Timing map — { time (seconds), index (acronym position) }
+           These are PLACEHOLDER timings. Replace with your real timestamps. */
+        cues: [
+            { time: 13.0,  index: 0  },   /* SOS  (verse 1) */
+            { time: 15.5,  index: 1  },   /* CIA  */
+            { time: 18.2,  index: 2  },   /* FBI  */
+            { time: 21.0,  index: 3  },   /* NSA  */
+            { time: 23.5,  index: 4  },   /* CBS  */
+            { time: 26.0,  index: 5  },   /* NBC  */
+            { time: 28.7, index: 6  },   /* CNN  */
+            { time: 31.0, index: 7  },   /* ABC  */
+            { time: 34.5, index: 8  },   /* SOS  */
+            { time: 37.0, index: 9  },   /* GNP  */
+            { time: 39.5, index: 10 },   /* CPI  */
+            { time: 41.7, index: 11 },   /* IMF  */
+            { time: 44.7, index: 12 },   /* GOP  */
+            { time: 47.5, index: 13 },   /* DNC  */
+            { time: 50.0, index: 14 },   /* CNN  */
+            { time: 52.6, index: 15 },   /* CNBC */
+
+            { time: 55.0, index: 16 },   /* SOS  (verse 2) */
+            { time: 58.5, index: 17 },   /* SEC  */
+            { time: 60.5, index: 18 },   /* CEO  */
+            { time: 63.0, index: 19 },   /* IRS  */
+            { time: 66.0, index: 20 },   /* CPR  */
+            { time: 69.0, index: 21 },   /* ICU  */
+            { time: 72.0, index: 22 },   /* RIP  */
+            { time: 74.5, index: 23 },   /* FTD  */
+            { time: 77.0, index: 24 },   /* SOS  */
+            { time: 79.5, index: 25 },   /* NFL  */
+            { time: 82.0, index: 26 },   /* MVP  */
+            { time: 84.5, index: 27 },   /* SUV  */
+            { time: 87.0, index: 28 },   /* APB  */
+            { time: 90.5, index: 29 },   /* ATF  */
+            { time: 93.3, index: 30 },   /* NRA  */
+            { time: 95.5, index: 31 },   /* ESPN */
+			
+			{ time: 99.5, index: 32 },   /* SOS  (verse 3) */
+            { time: 101.0, index: 33 },   /* DMZ  */
+            { time: 104.0, index: 34 },   /* MIA  */
+            { time: 107.0, index: 35 },   /* DOD  */
+            { time: 110.0, index: 36 },   /* ICBM */
+            { time: 113.0, index: 37 },   /* NSA  */
+            { time: 116.0, index: 38 },   /* WMD  */
+            { time: 119.0, index: 39 },   /* BBC  */
+            { time: 122.0, index: 40 },   /* SOS  */
+            { time: 125.0, index: 41 },   /* GPA  */
+            { time: 128.0, index: 42 },   /* SAT  */
+            { time: 131.0, index: 43 },   /* PTA  */
+            { time: 134.0, index: 44 },   /* OCD  */
+            { time: 137.0, index: 45 },   /* ADD  */
+            { time: 140.0, index: 46 },   /* PHD  */
+            { time: 143.0, index: 47 },   /* LLB  */
+			
+			{ time: 55.0, index: 48 },   /* SOS  (verse 4) */
+            { time: 58.5, index: 49 },   /* DEA  */
+            { time: 60.5, index: 50 },   /* THC  */
+            { time: 63.0, index: 51 },   /* PCP  */
+            { time: 66.0, index: 52 },   /* INS  */
+            { time: 69.0, index: 53 },   /* NSA  */
+            { time: 72.0, index: 54 },   /* NPR  */
+            { time: 74.5, index: 55 },   /* ACLU */
+            { time: 77.0, index: 56 },   /* SOS  */
+            { time: 79.5, index: 57 },   /* MSN  */
+            { time: 82.0, index: 58 },   /* ISP  */
+            { time: 84.5, index: 59 },   /* IBM  */
+            { time: 87.0, index: 60 },   /* AOL  */
+            { time: 90.5, index: 61 },   /* FCC  */
+            { time: 93.3, index: 62 },   /* SEC  */
+            { time: 95.5, index: 63 },   /* CNBC */
+			
+			{ time: 55.0, index: 48 },   /* SOS  (verse 5) */
+            { time: 58.5, index: 49 },   /* NBA  */
+            { time: 60.5, index: 50 },   /* NHL  */
+            { time: 63.0, index: 51 },   /* MLB  */
+            { time: 66.0, index: 52 },   /* RBI  */
+            { time: 69.0, index: 53 },   /* FDA  */
+            { time: 72.0, index: 54 },   /* CDC  */
+            { time: 74.5, index: 55 },   /* FBI  */
+
+            /* Continue adding cues for verses 3, 4, 5 ... */
+            /* { time: XX.X, index: 32 }, */
+        ],
+
+        /* How long (ms) each acronym stays highlighted before fading */
+        highlightDuration: 1500,
+
+        /* SYNC OFFSET (seconds) — if highlights appear TOO EARLY, increase this.
+           If they appear TOO LATE, decrease it (use a negative number).
+           Start with small adjustments like 0.2, 0.3, 0.5 until it feels right. */
+        offset: 0.0,
+    };
+
+    /* ════════════════════════════════════════════════════════════════
+       ENGINE — no need to edit below this line
+    ════════════════════════════════════════════════════════════════ */
+
+    const audio     = document.getElementById('karaoke-audio');
+    const btn       = document.getElementById('karaoke-btn');
+    const fill      = document.getElementById('karaoke-progress-fill');
+    const timeLabel = document.getElementById('karaoke-time');
+    const songLabel = document.getElementById('karaoke-song-label');
+
+    /* Collect all .acronym elements in DOM order */
+    const allAcronyms = Array.from(document.querySelectorAll('.acronym'));
+
+    /* Apply song label from config */
+    songLabel.textContent = KARAOKE_CONFIG.songLabel;
+
+    /* Add padding so player bar doesn't cover page content */
+    document.body.classList.add('karaoke-on');
+
+    let lastCueIndex = -1;
+    let highlightTimer = null;
+
+    /* ── Playback toggle ── */
+    function karaokeToggle() {
+        if (audio.paused) {
+            audio.play().catch(() => {
+                alert('Could not play audio. Make sure your song file path is correct in the <audio> tag.');
+            });
+            btn.textContent = 'Pause';
+        } else {
+            audio.pause();
+            btn.textContent = 'Play';
+        }
+    }
+
+    /* ── Seek by clicking the progress bar ── */
+    function karaokeSeek(e) {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const ratio = (e.clientX - rect.left) / rect.width;
+        audio.currentTime = ratio * audio.duration;
+        lastCueIndex = -1; /* reset so cues re-fire after seek */
+    }
+
+    /* ── Format seconds as M:SS ── */
+    function formatTime(s) {
+        if (!isFinite(s)) return '0:00';
+        const m = Math.floor(s / 60);
+        const sec = Math.floor(s % 60);
+        return `${m}:${sec.toString().padStart(2, '0')}`;
+    }
+
+    /* ── Remove highlight from all acronyms ── */
+    function clearHighlights() {
+        allAcronyms.forEach(el => el.classList.remove('karaoke-active'));
+    }
+
+    /* ── Highlight a single acronym by index ── */
+    function highlightAcronym(index) {
+        clearHighlights();
+        const el = allAcronyms[index];
+        if (!el) return;
+
+        el.classList.add('karaoke-active');
+
+        /* Scroll into view smoothly */
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        /* Auto-remove highlight after duration */
+        clearTimeout(highlightTimer);
+        highlightTimer = setTimeout(() => {
+            el.classList.remove('karaoke-active');
+        }, KARAOKE_CONFIG.highlightDuration);
+    }
+
+    /* ── Main timeupdate loop — fires ~4x per second ── */
+    audio.addEventListener('timeupdate', () => {
+        const t = audio.currentTime;
+
+        /* Update progress bar */
+        if (audio.duration) {
+            fill.style.width = ((t / audio.duration) * 100) + '%';
+        }
+
+        /* Update time label */
+        timeLabel.textContent = formatTime(t);
+
+        /* Find the latest cue that should have fired by now */
+        const cues = KARAOKE_CONFIG.cues;
+        const offset = KARAOKE_CONFIG.offset || 0;
+        let activeCue = -1;
+        for (let i = 0; i < cues.length; i++) {
+            if (t >= cues[i].time + offset) activeCue = i;
+            else break;
+        }
+
+        /* Only fire if we've moved to a new cue */
+        if (activeCue !== lastCueIndex && activeCue >= 0) {
+            lastCueIndex = activeCue;
+            highlightAcronym(cues[activeCue].index);
+        }
+    });
+
+    audio.addEventListener('ended', () => {
+        btn.textContent = 'Play';
+        clearHighlights();
+        fill.style.width = '0%';
+        lastCueIndex = -1;
+    });
+
+    audio.addEventListener('pause', () => { btn.textContent = 'Play'; });
+    audio.addEventListener('play',  () => { btn.textContent = 'Pause'; });
+
+    /* ── DEV HELPER: open browser console and run karaokeListAcronyms()
+       to print every acronym with its index, so you can map timings.   ── */
+    window.karaokeListAcronyms = function() {
+        allAcronyms.forEach((el, i) => {
+            console.log(`[${i}] ${el.textContent.trim().split('\n')[0].trim()}`);
+        });
+        console.log(`Total acronyms: ${allAcronyms.length}`);
+    };
+    </script>
 </body>
 </html>
